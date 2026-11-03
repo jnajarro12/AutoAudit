@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Generador de triggers · AutoAudit{% endblock %}
+
+{% block breadcrumb %}
+Generador de triggers / Administración
+{% endblock %}
+
+{% block content %}
+
+<div class="page-heading">
+    <div>
+        <h1>Generador de triggers</h1>
+        <p>Administra y genera automáticamente los triggers de auditoría de PostgreSQL.</p>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+
+    <div class="col-12 col-md-4">
+        <div class="card p-3">
+            <div class="metric-label">Tablas configuradas</div>
+            <div class="metric-value">{{ configurations|length }}</div>
+            <div class="metric-foot">Configuraciones registradas</div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card p-3">
+            <div class="metric-label">Auditorías habilitadas</div>
+            <div class="metric-value">{{ configurations|selectattr('enabled')|list|length }}</div>
+            <div class="metric-foot">Tablas monitoreadas</div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card p-3">
+            <div class="metric-label">Motor de base de datos</div>
+            <div class="metric-value" style="font-size:22px;">PostgreSQL</div>
+            <div class="metric-foot">Generación automática de triggers</div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card p-3 p-md-4">
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <div>
+            <h2 class="section-title mb-1">
+                <i class="fa-solid fa-bolt text-primary me-2"></i>
+                Triggers configurados
+            </h2>
+            <p class="text-secondary mb-0">
+                Consulta las configuraciones y genera los triggers correspondientes.
+            </p>
+        </div>
+        <a href="{{ url_for('configure') }}" class="btn btn-outline-primary">
+            <i class="fa-solid fa-plus me-2"></i>Nueva configuración
+        </a>
+    </div>
+
+    {% if configurations %}
+
+        {% for item in configurations %}
+
+        <div class="border rounded-3 p-3 p-md-4 mb-4">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+
+                <div>
+                    <h5 class="fw-bold mb-1">
+                        <i class="fa-solid fa-table text-primary me-2"></i>
+                        {{ item.schema_name }}.{{ item.table_name }}
+                    </h5>
+
+                    <small class="text-secondary">
+                        Trigger: {{ item.trigger_name }}
+                    </small>
+                </div>
+
+                {% if item.enabled %}
+                    <span class="badge text-bg-success">Auditoría habilitada</span>
+                {% else %}
+                    <span class="badge text-bg-secondary">Auditoría deshabilitada</span>
+                {% endif %}
+
+            </div>
+
+            <hr>
+
+            <h6 class="fw-bold mb-3">Operaciones configuradas</h6>
+
+            <div class="d-flex flex-wrap gap-2 mb-4">
+
+                {% if item.audit_insert %}
+                    <span class="badge text-bg-primary p-2">INSERT</span>
+                {% endif %}
+
+                {% if item.audit_update %}
+                    <span class="badge text-bg-warning p-2">UPDATE</span>
+                {% endif %}
+
+                {% if item.audit_delete %}
+                    <span class="badge text-bg-danger p-2">DELETE</span>
+                {% endif %}
+
+                {% if not item.audit_insert and not item.audit_update and not item.audit_delete %}
+                    <span class="text-secondary">No hay operaciones seleccionadas.</span>
+                {% endif %}
+
+            </div>
+
+            <h6 class="fw-bold mb-3">Columnas auditadas</h6>
+
+            <div class="d-flex flex-wrap gap-2 mb-4">
+
+                {% for column in item.columns %}
+                    <span class="badge text-bg-light border text-dark p-2">
+                        <i class="fa-solid fa-columns me-1"></i>
+                        {{ column }}
+                    </span>
+                {% else %}
+                    <span class="text-secondary">No hay columnas configuradas.</span>
+                {% endfor %}
+
+            </div>
+
+            <h6 class="fw-bold mb-2">
+                <i class="fa-solid fa-code text-primary me-2"></i>
+                Código SQL del trigger
+            </h6>
+
+            <pre class="bg-dark text-light rounded-3 p-3"
+                 style="font-size:12px; overflow-x:auto; white-space:pre-wrap;">{{ item.sql_preview }}</pre>
+
+            <div class="d-flex justify-content-end">
+
+                <form method="POST" action="{{ url_for('generate_trigger') }}">
+
+                    <input type="hidden" name="schema_name"
+                           value="{{ item.schema_name }}">
+
+                    <input type="hidden" name="table_name"
+                           value="{{ item.table_name }}">
+
+                    <button type="submit"
+                            class="btn btn-primary"
+                            {% if not item.enabled or not (item.audit_insert or item.audit_update or item.audit_delete) %}disabled{% endif %}>
+
+                        <i class="fa-solid fa-bolt me-2"></i>
+                        Generar / actualizar trigger
+
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="text-center py-5">
+
+            <i class="fa-solid fa-bolt text-secondary"
+               style="font-size:45px;"></i>
+
+            <h5 class="mt-3">No hay configuraciones registradas</h5>
+
+            <p class="text-secondary">
+                Primero debes configurar una tabla para generar sus triggers.
+            </p>
+
+            <a href="{{ url_for('configure') }}"
+               class="btn btn-primary">
+
+                <i class="fa-solid fa-sliders me-2"></i>
+                Ir a configuración
+
+            </a>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
